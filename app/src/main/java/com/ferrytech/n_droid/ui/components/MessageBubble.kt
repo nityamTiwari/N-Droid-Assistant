@@ -35,44 +35,62 @@ fun MessageBubble(message: Message) {
         horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
     ) {
         if (message.isUser) {
-            // User message - simple bubble
-            UserMessageBubble(message)
+            UserMessageBubble(message, context)
         } else {
-            // AI message - parse and render with code blocks
             AIMessageBubble(message, context)
         }
     }
 }
 
 @Composable
-private fun UserMessageBubble(message: Message) {
-    Box(
-        modifier = Modifier
-            .widthIn(max = 300.dp)
-            .clip(
-                RoundedCornerShape(
-                    topStart = 20.dp,
-                    topEnd = 20.dp,
-                    bottomStart = 20.dp,
-                    bottomEnd = 4.dp
-                )
-            )
-            .background(MaterialTheme.colorScheme.primary)
-            .padding(14.dp)
+private fun UserMessageBubble(message: Message, context: Context) {
+    Column(
+        modifier = Modifier.widthIn(max = 300.dp),
+        horizontalAlignment = Alignment.End
     ) {
-        Text(
-            text = message.text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.White
-        )
+        val parts = parseMessageWithCodeBlocks(message.text)
+        parts.forEach { part ->
+            when (part) {
+                is MessagePart.Text -> {
+                    if (part.content.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clip(
+                                    RoundedCornerShape(
+                                        topStart = 20.dp,
+                                        topEnd = 20.dp,
+                                        bottomStart = 20.dp,
+                                        bottomEnd = 4.dp
+                                    )
+                                )
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(14.dp)
+                        ) {
+                            Text(
+                                text = part.content.trim(),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+                is MessagePart.Code -> {
+                    CodeBlock(
+                        code = part.content,
+                        language = part.language,
+                        context = context
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun AIMessageBubble(message: Message, context: Context) {
     Column(
-        modifier = Modifier
-            .widthIn(max = 340.dp)
+        modifier = Modifier.widthIn(max = 340.dp)
     ) {
         val parts = parseMessageWithCodeBlocks(message.text)
 
@@ -90,7 +108,7 @@ private fun AIMessageBubble(message: Message, context: Context) {
                         ) {
                             Text(
                                 text = part.content.trim(),
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -125,7 +143,6 @@ private fun CodeBlock(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Header with language and copy button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -157,7 +174,6 @@ private fun CodeBlock(
                 }
             }
 
-            // Code content
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -184,7 +200,6 @@ private fun copyToClipboard(context: Context, text: String) {
     clipboard.setPrimaryClip(clip)
 }
 
-// Data classes for parsing
 private sealed class MessagePart {
     data class Text(val content: String) : MessagePart()
     data class Code(val content: String, val language: String) : MessagePart()
@@ -192,11 +207,15 @@ private sealed class MessagePart {
 
 private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
     val parts = mutableListOf<MessagePart>()
-    val codeBlockRegex = "```(\\w*)\\n([\\s\\S]*?)```".toRegex()
+    val codeBlockRegex = Regex(
+        pattern = "```(\\w*)\\s*\\n([\\s\\S]*?)```",
+        options = setOf(RegexOption.MULTILINE)
+    )
 
     var lastIndex = 0
-    codeBlockRegex.findAll(text).forEach { matchResult ->
-        // Add text before code block
+    val matches = codeBlockRegex.findAll(text)
+
+    matches.forEach { matchResult ->
         if (matchResult.range.first > lastIndex) {
             val textContent = text.substring(lastIndex, matchResult.range.first)
             if (textContent.isNotBlank()) {
@@ -204,15 +223,13 @@ private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
             }
         }
 
-        // Add code block
-        val language = matchResult.groupValues[1]
+        val language = matchResult.groupValues[1].trim()
         val code = matchResult.groupValues[2]
         parts.add(MessagePart.Code(code, language))
 
         lastIndex = matchResult.range.last + 1
     }
 
-    // Add remaining text after last code block
     if (lastIndex < text.length) {
         val textContent = text.substring(lastIndex)
         if (textContent.isNotBlank()) {
@@ -220,7 +237,6 @@ private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
         }
     }
 
-    // If no code blocks found, treat entire message as text
     if (parts.isEmpty() && text.isNotBlank()) {
         parts.add(MessagePart.Text(text))
     }

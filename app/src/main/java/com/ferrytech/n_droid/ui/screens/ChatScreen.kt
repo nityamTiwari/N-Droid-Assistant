@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,  // ← ADDED THIS
     viewModel: ChatViewModel = viewModel()
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -70,6 +72,14 @@ fun ChatScreen(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Clear chat"
+                        )
+                    }
+                    IconButton(
+                        onClick = onNavigateToSettings  // ← ADDED SETTINGS BUTTON
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings"
                         )
                     }
                 },

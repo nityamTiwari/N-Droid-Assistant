@@ -9,16 +9,18 @@ import kotlinx.coroutines.flow.flow
 
 class GeminiRepository {
 
-    private val generativeModel = GenerativeModel(
-        modelName = Constants.MODEL_NAME,
-        apiKey = Constants.GEMINI_API_KEY,
-        generationConfig = generationConfig {
-            temperature = 0.7f
-            topK = 40
-            topP = 0.95f
-            maxOutputTokens = 8192
-        }
-    )
+    private fun getGenerativeModel(): GenerativeModel {
+        return GenerativeModel(
+            modelName = Constants.MODEL_NAME,  // Now uses dynamic value
+            apiKey = Constants.GEMINI_API_KEY,
+            generationConfig = generationConfig {
+                temperature = 0.7f
+                topK = 40
+                topP = 0.95f
+                maxOutputTokens = 8192
+            }
+        )
+    }
 
     fun sendMessage(userMessage: String, mode: ChatMode): Flow<String> = flow {
         val systemPrompt = when (mode) {
@@ -34,6 +36,7 @@ class GeminiRepository {
         """.trimIndent()
 
         try {
+            val generativeModel = getGenerativeModel()
             val response = generativeModel.generateContentStream(fullPrompt)
             response.collect { chunk ->
                 emit(chunk.text ?: "")
