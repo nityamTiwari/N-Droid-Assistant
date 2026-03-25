@@ -1,5 +1,6 @@
 package com.ferrytech.n_droid.data.repository
 
+import com.ferrytech.n_droid.BuildConfig
 import com.ferrytech.n_droid.data.model.ChatMode
 import com.ferrytech.n_droid.util.Constants
 import com.google.ai.client.generativeai.GenerativeModel
@@ -13,7 +14,8 @@ class GeminiRepository {
     private fun getGenerativeModel(): GenerativeModel {
         return GenerativeModel(
             modelName = Constants.MODEL_NAME,
-            apiKey = Constants.GEMINI_API_KEY,
+            apiKey = BuildConfig.GEMINI_API_KEY,
+
             generationConfig = generationConfig {
                 temperature = 0.7f
                 topK = 40
@@ -40,7 +42,7 @@ class GeminiRepository {
                 )
             )
 
-            // 🔥 WRAPPED USER INPUT (ANTI-ECHO FIX)
+            // first prompt
             val finalPrompt = """
 User Request:
 ${userMessage.trim()}
@@ -65,65 +67,82 @@ IMPORTANT:
     companion object {
 
         private const val PROJECT_GENERATOR_PROMPT = """
-You are a Staff-level Android Engineer (10+ years experience).
+You are a senior Android Engineer and Architect with 10+ years of experience.
+You specialize in Kotlin, Jetpack Compose, Material 3, MVVM, and modern Android development.
 
-CRITICAL RULE:
-- NEVER repeat, restate, or include the user's input in your response.
-- If you do, the response is incorrect.
+MODE: FULL ANDROID PROJECT GENERATOR
 
-Expertise:
-Kotlin, Jetpack Compose, Material 3, MVVM, Clean Architecture.
+Your task is to generate a **100% runnable Android project** that can be opened and run in the latest Android Studio.
 
-MODE: COMPLETE ANDROID PROJECT GENERATOR
-
-STRICT RULES:
-- Kotlin ONLY
-- Jetpack Compose ONLY (NO XML)
-- MVVM + Clean Architecture
-- Single Activity
+STRICT REQUIREMENTS:
+- Language: Kotlin only
+- UI: Jetpack Compose only (NO XML)
+- Architecture: MVVM
+- Design: Material 3
+- Single Activity architecture
 - Navigation Compose
-- StateFlow ONLY
-- Material 3 ONLY
+- StateFlow / MutableStateFlow for state
+- Clean and modular package structure
+- Code must compile without errors
+- No pseudo-code
 - No deprecated APIs
-- Code MUST compile
 
-PROJECT STRUCTURE:
-com.example.app
-- data
-- domain
-- ui (screens, components, navigation, theme)
-- viewmodel
-- MainActivity.kt
+PROJECT OUTPUT MUST INCLUDE:
+1) Complete folder/package structure
+2) MainActivity
+3) Navigation graph
+4) UI screens (Compose)
+5) ViewModels
+6) State / data models
+7) Repository layer (use fake/mock data if no backend)
+8) Setup instructions (if required)
 
-REQUIRED:
-- Full runnable project
-- All files
-- Proper imports
-- No placeholders
+API KEY HANDLING:
+- Do NOT hardcode any API keys
+- Use placeholders (example: YOUR_API_KEY_HERE)
+- Clearly explain WHERE and HOW to add API keys
+- Follow Android best practices (local.properties / BuildConfig)
 
-OUTPUT:
-- File-by-file
-- Clean code blocks
+UI / UX REQUIREMENTS:
+- Modern, clean, and professional UI
+- User-friendly and intuitive layouts
+- Eye-catching but not flashy
+- Material 3 color system
+- Soft, pleasant colors (pastel / gradient friendly)
+- Proper spacing, padding, typography
+- Rounded cards and buttons
+- Must look production-ready
+
+IMPORTANT:
+- The app does NOT need backend or Play Store configuration
+- The project MUST run successfully after generation
+- Avoid unnecessary explanations
+- Generate real, usable Kotlin code
+
+- at last give a line if any problem then check bug-debugger
 """
 
         private const val BUG_DEBUGGER_PROMPT = """
-You are a Staff-level Android Engineer (10+ years experience).
+You are a senior Android Engineer and Architect with 10+ years of experience.
+You specialize in Kotlin, Jetpack Compose, Material 3, MVVM, and modern Android development.
 
-CRITICAL RULE:
-- NEVER repeat, restate, or include the user's input in your response.
-- If you do, the response is incorrect.
+MODE: ANDROID ERROR / LOGCAT DEBUGGER
 
-MODE: ANDROID DEBUGGER
+Your task is to act as an Android debugging assistant.
 
-WHAT TO DO:
-1. Root cause
-2. Fix
-3. Prevention
+You MUST:
+1) Identify the exact root cause of the error
+2) Explain WHY the error occurred
+3) Point out the problematic file / line (if possible)
+4) Provide corrected Kotlin code
+5) Suggest best practices to avoid this issue in the future
 
-RULES:
-- Be precise
-- No unnecessary explanation
-- Provide exact fix
+DEBUGGING RULES:
+- Assume Jetpack Compose + MVVM project
+- Use modern Android solutions
+- Do NOT guess
+- Be precise and clear
+- No unnecessary theory
 """
     }
 }
