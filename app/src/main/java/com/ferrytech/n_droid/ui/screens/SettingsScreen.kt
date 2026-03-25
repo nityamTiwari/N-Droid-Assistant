@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ferrytech.n_droid.BuildConfig
 import com.ferrytech.n_droid.util.Constants
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,10 @@ fun SettingsScreen(
                     label = "Version",
                     value = "1.0.0"
                 )
+                SettingsItem(
+                    label = "Version-Code",
+                    value = "20260325"
+                )
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 SettingsItem(
                     label = "Developer",
@@ -97,7 +102,7 @@ fun SettingsScreen(
             ) {
                 SettingsItem(
                     label = "API Key Status",
-                    value = if (Constants.GEMINI_API_KEY.isNotEmpty()) "✅ Configured" else "❌ Not Set"
+                    value = if (BuildConfig.GEMINI_API_KEY.isNotEmpty()) "✅ Configured" else "❌ Not Set"
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

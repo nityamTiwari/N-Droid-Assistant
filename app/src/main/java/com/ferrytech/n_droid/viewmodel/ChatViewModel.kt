@@ -26,36 +26,80 @@ class ChatViewModel : ViewModel() {
 
     fun setMode(mode: ChatMode) {
         _currentMode.value = mode
+        clearChat()
     }
 
     fun sendMessage(userMessage: String) {
         if (userMessage.isBlank()) return
 
-        // Add user message
-        val userMsg = Message(text = userMessage, isUser = true)
+        val cleanInput = userMessage.trim()
+
+        // USER MESSAGE
+        val userMsg = Message(
+            id = "user_${System.currentTimeMillis()}",
+            text = cleanInput,
+            isUser = true
+        )
         _messages.update { it + userMsg }
+
         _isLoading.value = true
 
-        // Add placeholder for AI response
-        val aiMsgId = System.currentTimeMillis().toString()
-        val aiMsg = Message(id = aiMsgId, text = "", isUser = false)
+        // AI PLACEHOLDER
+        val aiMsgId = "ai_${System.currentTimeMillis()}"
+        val aiMsg = Message(
+            id = aiMsgId,
+            text = "",
+            isUser = false
+        )
         _messages.update { it + aiMsg }
 
         viewModelScope.launch {
-            var fullResponse = ""
-            repository.sendMessage(userMessage, _currentMode.value).collect { chunk ->
-                fullResponse += chunk
+            try {
+                var fullResponse = ""
+
+                repository.sendMessage(cleanInput, _currentMode.value)
+                    .collect { chunk ->
+
+                        fullResponse += chunk
+
+                        // 🔥 REMOVE ECHO HERE
+                        val cleaned = removeEcho(fullResponse, cleanInput)
+
+                        _messages.update { messages ->
+                            messages.map { msg ->
+                                if (msg.id == aiMsgId && !msg.isUser) {
+                                    msg.copy(text = cleaned)
+                                } else msg
+                            }
+                        }
+                    }
+
+            } catch (e: Exception) {
                 _messages.update { messages ->
                     messages.map { msg ->
                         if (msg.id == aiMsgId) {
-                            msg.copy(text = fullResponse)
-                        } else {
-                            msg
-                        }
+                            msg.copy(text = "Error: ${e.message}")
+                        } else msg
                     }
                 }
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
+        }
+    }
+
+    private fun removeEcho(response: String, userInput: String): String {
+        val input = userInput.trim()
+
+        return when {
+            response.startsWith(input) -> {
+                response.removePrefix(input).trim()
+            }
+            response.contains(input) -> {
+                response.replace(input, "").trim()
+            }
+
+            else -> response
         }
     }
 

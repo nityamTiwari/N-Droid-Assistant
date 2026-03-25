@@ -1,5 +1,7 @@
 package com.ferrytech.n_droid.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,12 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ferrytech.n_droid.data.model.ChatMode
@@ -27,7 +31,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToSettings: () -> Unit,  // ← ADDED THIS
+    onNavigateToSettings: () -> Unit,
     viewModel: ChatViewModel = viewModel()
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -37,6 +41,7 @@ fun ChatScreen(
     var userInput by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current // Used for Deep Linking
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -66,21 +71,11 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.clearChat() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Clear chat"
-                        )
+                    IconButton(onClick = { viewModel.clearChat() }) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear chat")
                     }
-                    IconButton(
-                        onClick = onNavigateToSettings  // ← ADDED SETTINGS BUTTON
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
-                        )
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -99,46 +94,59 @@ fun ChatScreen(
                 onModeChanged = { viewModel.setMode(it) }
             )
 
-            if (messages.isEmpty()) {
-                EmptyState(currentMode = currentMode)
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(messages) { message ->
-                        MessageBubble(message = message)
-                    }
+            // Chat Messages Area
+            Box(modifier = Modifier.weight(1f)) {
+                if (messages.isEmpty()) {
+                    EmptyState(currentMode = currentMode)
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(messages) { message ->
+                            MessageBubble(message = message)
+                        }
 
-                    if (isLoading) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp
-                                )
+                        if (isLoading) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp, start = 12.dp, end = 12.dp, top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                //  Suggestion Button (The Deep Link/Web Trigger)
+                TextButton(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://your-prompt-website.com"))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Need a better prompt? Get suggestions")
+                }
+
+                //  Input Row
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
@@ -153,10 +161,11 @@ fun ChatScreen(
                                 }
                             )
                         },
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(28.dp),
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
                         ),
                         maxLines = 5
                     )
@@ -171,7 +180,7 @@ fun ChatScreen(
                             }
                         },
                         enabled = userInput.isNotBlank() && !isLoading,
-                        modifier = Modifier.size(56.dp)
+                        modifier = Modifier.size(52.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
@@ -200,9 +209,7 @@ private fun EmptyState(currentMode: ChatMode) {
             },
             style = MaterialTheme.typography.displayLarge
         )
-
         Spacer(modifier = Modifier.height(16.dp))
-
         Text(
             text = when (currentMode) {
                 ChatMode.PROJECT_GENERATOR -> "Project Generator Mode"
@@ -210,9 +217,7 @@ private fun EmptyState(currentMode: ChatMode) {
             },
             style = MaterialTheme.typography.titleLarge
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
         Text(
             text = when (currentMode) {
                 ChatMode.PROJECT_GENERATOR -> "Describe your Android app idea and I'll generate a complete, runnable project for you!"
