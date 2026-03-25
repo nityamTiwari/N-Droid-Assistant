@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "677929075594",
+    "project_id": "n-droid-3c74b",
+    "storage_bucket": "n-droid-3c74b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:677929075594:android:7a23ab7b7c1596dac6fe73",
+        "android_client_info": {
+          "package_name": "com.ferrytech.n_droid"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "677929075594-d0i8qpq966f4ko9f8k0l1i59de2bk31r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ferrytech.n_droid",
+            "certificate_hash": "819a82b5407505e7002c1ce42472eb2b7d6d9784"
+          }
+        },
+        {
+          "client_id": "677929075594-rivabktm71j88vsfr6955cj09745b0pd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ferrytech.n_droid",
+            "certificate_hash": "fe8b83b88cf86b24ef3211f4bf849fb0ac315774"
+          }
+        },
+        {
+          "client_id": "677929075594-fgsu93ht3jlfqug3tti9h5pr8df9ued0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDo-I_9rzq_FVp8pd6ejfF2ZYwtgqDuv1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "677929075594-fgsu93ht3jlfqug3tti9h5pr8df9ued0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

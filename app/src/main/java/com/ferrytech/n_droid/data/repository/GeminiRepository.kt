@@ -1,8 +1,10 @@
 package com.ferrytech.n_droid.data.repository
 
+import com.ferrytech.n_droid.BuildConfig
 import com.ferrytech.n_droid.data.model.ChatMode
 import com.ferrytech.n_droid.util.Constants
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -11,8 +13,9 @@ class GeminiRepository {
 
     private fun getGenerativeModel(): GenerativeModel {
         return GenerativeModel(
-            modelName = Constants.MODEL_NAME,  // Now uses dynamic value
-            apiKey = Constants.GEMINI_API_KEY,
+            modelName = Constants.MODEL_NAME,
+            apiKey = BuildConfig.GEMINI_API_KEY,
+
             generationConfig = generationConfig {
                 temperature = 0.7f
                 topK = 40
@@ -23,30 +26,46 @@ class GeminiRepository {
     }
 
     fun sendMessage(userMessage: String, mode: ChatMode): Flow<String> = flow {
+
         val systemPrompt = when (mode) {
             ChatMode.PROJECT_GENERATOR -> PROJECT_GENERATOR_PROMPT
             ChatMode.BUG_DEBUGGER -> BUG_DEBUGGER_PROMPT
         }
 
-        val fullPrompt = """
-            $systemPrompt
-            
-            User Request:
-            $userMessage
-        """.trimIndent()
-
         try {
             val generativeModel = getGenerativeModel()
-            val response = generativeModel.generateContentStream(fullPrompt)
+
+            val chat = generativeModel.startChat(
+                history = listOf(
+                    content("user") { text(systemPrompt) },
+                    content("model") { text("Understood. I will follow all rules strictly.") }
+                )
+            )
+
+            // first prompt
+            val finalPrompt = """
+User Request:
+${userMessage.trim()}
+
+IMPORTANT:
+- Do NOT repeat the user request
+- Do NOT include the user input in response
+- Only return the final answer
+""".trimIndent()
+
+            val response = chat.sendMessageStream(finalPrompt)
+
             response.collect { chunk ->
                 emit(chunk.text ?: "")
             }
+
         } catch (e: Exception) {
-            emit("Error: ${e.message ?: "Something went wrong. Please check your API key and internet connection."}")
+            emit("Error: ${e.message ?: "Something went wrong."}")
         }
     }
 
     companion object {
+
         private const val PROJECT_GENERATOR_PROMPT = """
 You are a senior Android Engineer and Architect with 10+ years of experience.
 You specialize in Kotlin, Jetpack Compose, Material 3, MVVM, and modern Android development.
@@ -99,7 +118,9 @@ IMPORTANT:
 - The project MUST run successfully after generation
 - Avoid unnecessary explanations
 - Generate real, usable Kotlin code
-        """
+
+- at last give a line if any problem then check bug-debugger
+"""
 
         private const val BUG_DEBUGGER_PROMPT = """
 You are a senior Android Engineer and Architect with 10+ years of experience.
@@ -122,6 +143,6 @@ DEBUGGING RULES:
 - Do NOT guess
 - Be precise and clear
 - No unnecessary theory
-        """
+"""
     }
 }
