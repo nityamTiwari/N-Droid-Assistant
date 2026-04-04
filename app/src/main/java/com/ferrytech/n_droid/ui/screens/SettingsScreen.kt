@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ferrytech.n_droid.BuildConfig
@@ -106,7 +105,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "API keys are stored securely in local.properties file.",
+                    text = "Now You Securely Connected To AI Services.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -118,7 +117,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Info
             ) {
                 Text(
-                    text = "N-Droid is an AI-powered Android development assistant that helps you generate complete Android projects and debug errors using Google Gemini AI.",
+                    text = "N-Droid is an AI-powered Android development assistant that helps you generate complete Android projects and debug errors.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

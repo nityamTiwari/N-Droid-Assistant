@@ -38,7 +38,7 @@ fun Navigation() {
         navController = navController,
         startDestination = startDestination
     ) {
-        // Auth Screens
+        // auth Screens
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToSignUp = {
@@ -114,6 +114,8 @@ fun Navigation() {
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 }
+//                },onOpenWebView = {
+//                  println("Prompt tune open")                }
             )
         }
 
