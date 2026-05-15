@@ -36,7 +36,7 @@ fun MessageBubble(message: Message) {
     ) {
         if (message.isUser) {
             // USER MESSAGE
-            UserMessageBubble(text = message.text)
+            UserMessageBubble(text = message.text, imageUri = message.imageUri)
         } else {
             // AI MESSAGE ---- AI PARSING
             AIMessageBubble(text = message.text, context = context)
@@ -45,7 +45,7 @@ fun MessageBubble(message: Message) {
 }
 
 @Composable
-private fun UserMessageBubble(text: String) {
+private fun UserMessageBubble(text: String, imageUri: String? = null) {
     Box(
         modifier = Modifier
             .widthIn(max = 300.dp)
@@ -60,11 +60,26 @@ private fun UserMessageBubble(text: String) {
             .background(MaterialTheme.colorScheme.primary)
             .padding(14.dp)
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.White
-        )
+        Column {
+            if (imageUri != null) {
+                coil.compose.AsyncImage(
+                    model = imageUri,
+                    contentDescription = "User image",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .padding(bottom = if (text.isNotBlank()) 8.dp else 0.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+                )
+            }
+            if (text.isNotBlank()) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White
+                )
+            }
+        }
     }
 }
 

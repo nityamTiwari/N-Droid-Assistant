@@ -63,11 +63,11 @@ fun SettingsScreen(
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 SettingsItem(
                     label = "Version",
-                    value = "1.0.0"
+                    value = BuildConfig.VERSION_NAME
                 )
                 SettingsItem(
                     label = "Version-Code",
-                    value = "20260325"
+                    value = BuildConfig.VERSION_CODE.toString()
                 )
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 SettingsItem(

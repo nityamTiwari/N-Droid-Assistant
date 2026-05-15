@@ -2,6 +2,9 @@ package com.ferrytech.n_droid.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Settings
@@ -17,10 +21,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.ferrytech.n_droid.data.model.ChatMode
 import com.ferrytech.n_droid.ui.components.MessageBubble
 import com.ferrytech.n_droid.ui.components.ModeSelector
@@ -39,6 +45,11 @@ fun ChatScreen(
     val currentMode by viewModel.currentMode.collectAsState()
 
     var userInput by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> selectedImageUri = uri }
+    )
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current // Used for Deep Linking
@@ -59,6 +70,7 @@ fun ChatScreen(
                         text = when (currentMode) {
                             ChatMode.PROJECT_GENERATOR -> "🛠️ Project Generator"
                             ChatMode.BUG_DEBUGGER -> "🐞 Bug Debugger"
+                            ChatMode.UI_BUILDER -> "🖼️ UI Builder"
                         }
                     )
                 },
@@ -145,10 +157,33 @@ fun ChatScreen(
                 }
 
                 //  Input Row
+                if (selectedImageUri != null) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                        AsyncImage(
+                            model = selectedImageUri,
+                            contentDescription = "Selected image preview",
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = { selectedImageUri = null },
+                            modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape).size(24.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Remove image", tint = Color.White, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(
+                        onClick = { photoPickerLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Photo")
+                    }
                     TextField(
                         value = userInput,
                         onValueChange = { userInput = it },
@@ -158,6 +193,7 @@ fun ChatScreen(
                                 text = when (currentMode) {
                                     ChatMode.PROJECT_GENERATOR -> "Describe your app idea..."
                                     ChatMode.BUG_DEBUGGER -> "Paste your error or Logcat..."
+                                    ChatMode.UI_BUILDER -> "Upload a screenshot or ask a question..."
                                 }
                             )
                         },
@@ -174,12 +210,13 @@ fun ChatScreen(
 
                     FilledIconButton(
                         onClick = {
-                            if (userInput.isNotBlank() && !isLoading) {
-                                viewModel.sendMessage(userInput)
+                            if ((userInput.isNotBlank() || selectedImageUri != null) && !isLoading) {
+                                viewModel.sendMessage(userInput, selectedImageUri, context)
                                 userInput = ""
+                                selectedImageUri = null
                             }
                         },
-                        enabled = userInput.isNotBlank() && !isLoading,
+                        enabled = (userInput.isNotBlank() || selectedImageUri != null) && !isLoading,
                         modifier = Modifier.size(52.dp)
                     ) {
                         Icon(
@@ -206,6 +243,7 @@ private fun EmptyState(currentMode: ChatMode) {
             text = when (currentMode) {
                 ChatMode.PROJECT_GENERATOR -> "🛠️"
                 ChatMode.BUG_DEBUGGER -> "🐞"
+                ChatMode.UI_BUILDER -> "🖼️"
             },
             style = MaterialTheme.typography.displayLarge
         )
@@ -214,6 +252,7 @@ private fun EmptyState(currentMode: ChatMode) {
             text = when (currentMode) {
                 ChatMode.PROJECT_GENERATOR -> "Project Generator Mode"
                 ChatMode.BUG_DEBUGGER -> "Bug Debugger Mode"
+                ChatMode.UI_BUILDER -> "UI Builder Mode"
             },
             style = MaterialTheme.typography.titleLarge
         )
@@ -222,6 +261,7 @@ private fun EmptyState(currentMode: ChatMode) {
             text = when (currentMode) {
                 ChatMode.PROJECT_GENERATOR -> "Describe your Android app idea and I'll generate a complete, runnable project for you!"
                 ChatMode.BUG_DEBUGGER -> "Paste your error or Logcat output and I'll help you debug and fix it!"
+                ChatMode.UI_BUILDER -> "Upload an app UI screenshot and I'll convert it into clean Jetpack Compose code!"
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

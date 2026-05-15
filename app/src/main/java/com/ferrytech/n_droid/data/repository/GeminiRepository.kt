@@ -25,11 +25,12 @@ class GeminiRepository {
         )
     }
 
-    fun sendMessage(userMessage: String, mode: ChatMode): Flow<String> = flow {
+    fun sendMessage(userMessage: String, mode: ChatMode, imageBitmap: android.graphics.Bitmap? = null): Flow<String> = flow {
 
         val systemPrompt = when (mode) {
             ChatMode.PROJECT_GENERATOR -> PROJECT_GENERATOR_PROMPT
             ChatMode.BUG_DEBUGGER -> BUG_DEBUGGER_PROMPT
+            ChatMode.UI_BUILDER -> UI_BUILDER_PROMPT
         }
 
         try {
@@ -53,7 +54,14 @@ IMPORTANT:
 - Only return the final answer
 """.trimIndent()
 
-            val response = chat.sendMessageStream(finalPrompt)
+            val response = if (imageBitmap != null) {
+                chat.sendMessageStream(content {
+                    image(imageBitmap)
+                    text(finalPrompt)
+                })
+            } else {
+                chat.sendMessageStream(finalPrompt)
+            }
 
             response.collect { chunk ->
                 emit(chunk.text ?: "")
@@ -143,6 +151,27 @@ DEBUGGING RULES:
 - Do NOT guess
 - Be precise and clear
 - No unnecessary theory
+"""
+
+        private const val UI_BUILDER_PROMPT = """
+You are N-Droid, an AI Android development assistant.
+
+If the user uploads an Android app UI screenshot:
+- Analyze the UI carefully
+- Detect layouts, buttons, cards, text fields, images, navigation bars, and lists
+- Convert the design into clean Jetpack Compose Material3 code
+- Use reusable composables
+- Maintain proper spacing and alignment
+- Generate modern responsive UI
+- Include imports and preview
+- Return ONLY Kotlin Compose code
+- No explanations
+- No markdown
+- Ensure code is compilable
+
+If no screenshot is uploaded:
+- Act as a normal Android development AI assistant
+- Help with Kotlin, Java, Jetpack Compose, XML, MVVM, Firebase, APIs, debugging, and Android architecture
 """
     }
 }

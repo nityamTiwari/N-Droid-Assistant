@@ -29,8 +29,8 @@ class ChatViewModel : ViewModel() {
         clearChat()
     }
 
-    fun sendMessage(userMessage: String) {
-        if (userMessage.isBlank()) return
+    fun sendMessage(userMessage: String, imageUri: android.net.Uri? = null, context: android.content.Context? = null) {
+        if (userMessage.isBlank() && imageUri == null) return
 
         val cleanInput = userMessage.trim()
 
@@ -38,7 +38,8 @@ class ChatViewModel : ViewModel() {
         val userMsg = Message(
             id = "user_${System.currentTimeMillis()}",
             text = cleanInput,
-            isUser = true
+            isUser = true,
+            imageUri = imageUri?.toString()
         )
         _messages.update { it + userMsg }
 
@@ -57,7 +58,20 @@ class ChatViewModel : ViewModel() {
             try {
                 var fullResponse = ""
 
-                repository.sendMessage(cleanInput, _currentMode.value)
+                var bitmap: android.graphics.Bitmap? = null
+                if (imageUri != null && context != null) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        val source = android.graphics.ImageDecoder.createSource(context.contentResolver, imageUri)
+                        bitmap = android.graphics.ImageDecoder.decodeBitmap(source)
+                        // convert hardware bitmap to software to avoid genAI issues
+                        bitmap = bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        bitmap = android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
+                    }
+                }
+
+                repository.sendMessage(cleanInput, _currentMode.value, bitmap)
                     .collect { chunk ->
 
                         fullResponse += chunk
