@@ -5,10 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.*
@@ -35,101 +35,125 @@ fun MessageBubble(message: Message) {
         horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
     ) {
         if (message.isUser) {
-            // USER MESSAGE
-            UserMessageBubble(text = message.text, imageUri = message.imageUri)
+            UserMessageBubble(message, context)
         } else {
-            // AI MESSAGE ---- AI PARSING
-            AIMessageBubble(text = message.text, context = context)
+            AIMessageBubble(message, context)
         }
     }
 }
 
 @Composable
-private fun UserMessageBubble(text: String, imageUri: String? = null) {
-    Box(
-        modifier = Modifier
-            .widthIn(max = 300.dp)
-            .clip(
-                RoundedCornerShape(
-                    topStart = 20.dp,
-                    topEnd = 20.dp,
-                    bottomStart = 20.dp,
-                    bottomEnd = 4.dp
-                )
-            )
-            .background(MaterialTheme.colorScheme.primary)
-            .padding(14.dp)
-    ) {
-        Column {
-            if (imageUri != null) {
-                coil.compose.AsyncImage(
-                    model = imageUri,
-                    contentDescription = "User image",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .padding(bottom = if (text.isNotBlank()) 8.dp else 0.dp),
-                    contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
-                )
-            }
-            if (text.isNotBlank()) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AIMessageBubble(text: String, context: Context) {
+private fun UserMessageBubble(message: Message, context: Context) {
     Column(
-        modifier = Modifier.widthIn(max = 340.dp)
+        modifier = Modifier.fillMaxWidth(0.85f),
+        horizontalAlignment = Alignment.End
     ) {
-        // Check if message contains code blocks
-        if (text.contains("```")) {
-            // Parse and render with code blocks
-            val parts = parseMessageWithCodeBlocks(text)
-
-            parts.forEach { part ->
-                when (part) {
-                    is MessagePart.Text -> {
-                        if (part.content.isNotBlank()) {
-                            TextCard(text = part.content)
+        val parts = parseMessageWithCodeBlocks(message.text)
+        parts.forEach { part ->
+            when (part) {
+                is MessagePart.Text -> {
+                    if (part.content.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clip(
+                                    RoundedCornerShape(
+                                        topStart = 20.dp,
+                                        topEnd = 20.dp,
+                                        bottomStart = 20.dp,
+                                        bottomEnd = 4.dp
+                                    )
+                                )
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(14.dp)
+                        ) {
+                            Column {
+                                if (message.imageUri != null) {
+                                    coil.compose.AsyncImage(
+                                        model = message.imageUri,
+                                        contentDescription = "User image",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .padding(bottom = if (part.content.isNotBlank()) 8.dp else 0.dp),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+                                    )
+                                }
+                                if (part.content.isNotBlank()) {
+                                    Text(
+                                        text = part.content.trim(),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
                     }
-                    is MessagePart.Code -> {
-                        CodeBlock(
-                            code = part.content,
-                            language = part.language,
-                            context = context
-                        )
+                }
+                is MessagePart.Code -> {
+                    CodeBlock(
+                        code = part.content,
+                        language = part.language,
+                        context = context
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AIMessageBubble(message: Message, context: Context) {
+    Column(
+        modifier = Modifier.fillMaxWidth(0.95f)
+    ) {
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Column {
+                val parts = parseMessageWithCodeBlocks(message.text)
+
+                parts.forEach { part ->
+                    when (part) {
+                        is MessagePart.Text -> {
+                            if (part.content.isNotBlank()) {
+                                Text(
+                                    text = part.content.trim(),
+                                    style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+                                )
+                            }
+                        }
+                        is MessagePart.Code -> {
+                            CodeBlock(
+                                code = part.content,
+                                language = part.language,
+                                context = context
+                            )
+                        }
                     }
                 }
             }
-        } else {
-            // No code blocks
-            TextCard(text = text)
         }
-    }
-}
-@Composable
-private fun TextCard(text: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(12.dp)
-    ) {
-        Text(
-            text = text.trim(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            IconButton(
+                onClick = {
+                    copyToClipboard(context, message.text)
+                    Toast.makeText(context, "Response copied to clipboard!", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy message",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }
 
@@ -150,7 +174,6 @@ private fun CodeBlock(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -182,7 +205,6 @@ private fun CodeBlock(
                 }
             }
 
-            // Code content
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -205,11 +227,10 @@ private fun CodeBlock(
 
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("code", text)
+    val clip = ClipData.newPlainText("n-droid-content", text)
     clipboard.setPrimaryClip(clip)
 }
 
-// Message parsing logic
 private sealed class MessagePart {
     data class Text(val content: String) : MessagePart()
     data class Code(val content: String, val language: String) : MessagePart()
@@ -217,10 +238,9 @@ private sealed class MessagePart {
 
 private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
     val parts = mutableListOf<MessagePart>()
-
-    // Regex to match code blocks with triple backticks
+    // More flexible regex to catch blocks even if formatting varies slightly
     val codeBlockRegex = Regex(
-        pattern = "```(\\w*)\\s*\\n([\\s\\S]*?)```",
+        pattern = "```(\\w*)\\s*([\\s\\S]*?)```",
         options = setOf(RegexOption.MULTILINE)
     )
 
@@ -228,7 +248,6 @@ private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
     val matches = codeBlockRegex.findAll(text)
 
     matches.forEach { matchResult ->
-        // Add text before code block
         if (matchResult.range.first > lastIndex) {
             val textContent = text.substring(lastIndex, matchResult.range.first)
             if (textContent.isNotBlank()) {
@@ -236,7 +255,6 @@ private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
             }
         }
 
-        // Add code block
         val language = matchResult.groupValues[1].trim()
         val code = matchResult.groupValues[2]
         parts.add(MessagePart.Code(code, language))
@@ -244,12 +262,15 @@ private fun parseMessageWithCodeBlocks(text: String): List<MessagePart> {
         lastIndex = matchResult.range.last + 1
     }
 
-    // Add remaining text
     if (lastIndex < text.length) {
         val textContent = text.substring(lastIndex)
         if (textContent.isNotBlank()) {
             parts.add(MessagePart.Text(textContent))
         }
+    }
+
+    if (parts.isEmpty() && text.isNotBlank()) {
+        parts.add(MessagePart.Text(text))
     }
 
     return parts
