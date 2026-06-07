@@ -5,17 +5,20 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -32,6 +37,9 @@ import com.ferrytech.n_droid.ui.components.MessageBubble
 import com.ferrytech.n_droid.ui.components.ModeSelector
 import com.ferrytech.n_droid.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +51,9 @@ fun ChatScreen(
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val currentMode by viewModel.currentMode.collectAsState()
+    
+    val sessions by viewModel.sessions.collectAsState()
+    val currentSessionId by viewModel.currentSessionId.collectAsState()
 
     var userInput by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -52,7 +63,9 @@ fun ChatScreen(
     )
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current // Used for Deep Linking
+    val context = LocalContext.current
+    
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -62,167 +75,229 @@ fun ChatScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = when (currentMode) {
-                            ChatMode.PROJECT_GENERATOR -> "🛠️ Project Generator"
-                            ChatMode.BUG_DEBUGGER -> "🐞 Bug Debugger"
-                            ChatMode.UI_BUILDER -> "🖼️ UI Builder"
-                        }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.clearChat() }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear chat")
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Chat History",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.titleLarge
                 )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            ModeSelector(
-                currentMode = currentMode,
-                onModeChanged = { viewModel.setMode(it) }
-            )
+                HorizontalDivider()
+                
+                NavigationDrawerItem(
+                    label = { Text("New Chat") },
+                    selected = false,
+                    onClick = {
+                        viewModel.createNewSession()
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    icon = { Icon(Icons.Default.Add, contentDescription = "New Chat") },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
 
-            // Chat Messages Area
-            Box(modifier = Modifier.weight(1f)) {
-                if (messages.isEmpty()) {
-                    EmptyState(currentMode = currentMode)
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        items(messages) { message ->
-                            MessageBubble(message = message)
-                        }
+                NavigationDrawerItem(
+                    label = { Text("Back to Home") },
+                    selected = false,
+                    onClick = {
+                        coroutineScope.launch { drawerState.close() }
+                        onNavigateBack()
+                    },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
 
-                        if (isLoading) {
-                            item {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                    horizontalArrangement = Arrangement.Start
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp
-                                    )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                LazyColumn {
+                    items(sessions) { session ->
+                        NavigationDrawerItem(
+                            label = { 
+                                Column {
+                                    Text(session.title, maxLines = 1)
+                                    val date = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(session.createdAt))
+                                    Text(date, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                 }
-                            }
-                        }
+                            },
+                            selected = session.id == currentSessionId,
+                            onClick = {
+                                viewModel.loadSession(session.id)
+                                coroutineScope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
                     }
                 }
             }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = when (currentMode) {
+                                ChatMode.PROJECT_GENERATOR -> "🛠️ Project Generator"
+                                ChatMode.BUG_DEBUGGER -> "🐞 Bug Debugger"
+                                ChatMode.UI_BUILDER -> "🖼️ UI Builder"
+                            }
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menu"
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.clearChat() }) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear chat")
+                        }
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+            }
+        ) { paddingValues ->
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(bottom = 2.dp, start = 12.dp, end = 12.dp, top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
-                //suggestion
-                TextButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://prompttune.banter.life/"))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.padding(bottom = 4.dp)
-                ) {
-                    Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Need a better prompt? Get suggestions")
-                }
+                ModeSelector(
+                    currentMode = currentMode,
+                    onModeChanged = { viewModel.setMode(it) }
+                )
 
-                //  Input Row
-                if (selectedImageUri != null) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
-                        AsyncImage(
-                            model = selectedImageUri,
-                            contentDescription = "Selected image preview",
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                        )
-                        IconButton(
-                            onClick = { selectedImageUri = null },
-                            modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape).size(24.dp)
+                // Chat Messages Area
+                Box(modifier = Modifier.weight(1f)) {
+                    if (messages.isEmpty()) {
+                        EmptyState(currentMode = currentMode)
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove image", tint = Color.White, modifier = Modifier.size(16.dp))
+                            items(messages) { message ->
+                                MessageBubble(message = message)
+                            }
+
+                            if (isLoading) {
+                                item {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                        horizontalArrangement = Arrangement.Start
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(bottom = 2.dp, start = 12.dp, end = 12.dp, top = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    IconButton(
-                        onClick = { photoPickerLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Photo")
-                    }
-                    TextField(
-                        value = userInput,
-                        onValueChange = { userInput = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = {
-                            Text(
-                                text = when (currentMode) {
-                                    ChatMode.PROJECT_GENERATOR -> "Describe your app idea..."
-                                    ChatMode.BUG_DEBUGGER -> "Paste your error or Logcat..."
-                                    ChatMode.UI_BUILDER -> "Upload a screenshot or ask a question..."
-                                }
-                            )
-                        },
-                        shape = RoundedCornerShape(28.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        ),
-                        maxLines = 5
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    FilledIconButton(
+                    TextButton(
                         onClick = {
-                            if ((userInput.isNotBlank() || selectedImageUri != null) && !isLoading) {
-                                viewModel.sendMessage(userInput, selectedImageUri, context)
-                                userInput = ""
-                                selectedImageUri = null
-                            }
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://prompttune.banter.life/"))
+                            context.startActivity(intent)
                         },
-                        enabled = (userInput.isNotBlank() || selectedImageUri != null) && !isLoading,
-                        modifier = Modifier.size(52.dp)
+                        modifier = Modifier.padding(bottom = 4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send"
+                        Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Need a better prompt? Get suggestions")
+                    }
+
+                    if (selectedImageUri != null) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Selected image preview",
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = { selectedImageUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                    .size(24.dp)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Remove image", tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { photoPickerLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "Add Photo")
+                        }
+                        TextField(
+                            value = userInput,
+                            onValueChange = { userInput = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = {
+                                Text(
+                                    text = when (currentMode) {
+                                        ChatMode.PROJECT_GENERATOR -> "Describe your app idea..."
+                                        ChatMode.BUG_DEBUGGER -> "Paste your error or Logcat..."
+                                        ChatMode.UI_BUILDER -> "Upload a screenshot or ask a question..."
+                                    }
+                                )
+                            },
+                            shape = RoundedCornerShape(28.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            ),
+                            maxLines = 5
                         )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        FilledIconButton(
+                            onClick = {
+                                if ((userInput.isNotBlank() || selectedImageUri != null) && !isLoading) {
+                                    viewModel.sendMessage(userInput, selectedImageUri, context)
+                                    userInput = ""
+                                    selectedImageUri = null
+                                }
+                            },
+                            enabled = (userInput.isNotBlank() || selectedImageUri != null) && !isLoading,
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Send"
+                            )
+                        }
                     }
                 }
             }
@@ -265,7 +340,7 @@ private fun EmptyState(currentMode: ChatMode) {
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
     }
 }
