@@ -52,8 +52,6 @@ class AuthRepository {
         }
     }
 
-// Update this function in AuthRepository.kt
-
     suspend fun signUpWithEmail(email: String, password: String, displayName: String): Result<User> {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
@@ -96,7 +94,7 @@ class AuthRepository {
         }
     }
 
-    // Add this function to check if email is verified
+    // function to check if email is verified
     fun isEmailVerified(): Boolean {
         return auth.currentUser?.isEmailVerified ?: false
     }

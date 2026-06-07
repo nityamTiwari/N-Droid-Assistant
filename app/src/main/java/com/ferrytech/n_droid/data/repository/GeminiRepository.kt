@@ -1,8 +1,8 @@
 package com.ferrytech.n_droid.data.repository
 
-import com.ferrytech.n_droid.BuildConfig
 import com.ferrytech.n_droid.data.model.ChatMode
 import com.ferrytech.n_droid.util.Constants
+import com.ferrytech.n_droid.BuildConfig
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
@@ -127,6 +127,15 @@ IMPORTANT:
 - Avoid unnecessary explanations
 - Generate real, usable Kotlin code
 
+Extra Rules:
+
+* For normal conversation, reply naturally.
+* When reviewing code/UI/architecture, briefly suggest improvements if relevant.
+* End with: "Want me to improve it and generate the updated code?"
+* Only generate improved code if the user confirms (e.g., "yes", "improve it").
+* Otherwise continue normally.
+
+
 - at last give a line if any problem then check bug-debugger
 """
 
@@ -151,6 +160,15 @@ DEBUGGING RULES:
 - Do NOT guess
 - Be precise and clear
 - No unnecessary theory
+
+Extra Rules:
+
+* For normal conversation, reply naturally.
+* When reviewing code/UI/architecture, briefly suggest improvements if relevant.
+* End with: "Want me to improve it and generate the updated code?"
+* Only generate improved code if the user confirms (e.g., "yes", "improve it").
+* Otherwise continue normally.
+
 """
 
         private const val UI_BUILDER_PROMPT = """
@@ -164,14 +182,22 @@ If the user uploads an Android app UI screenshot:
 - Maintain proper spacing and alignment
 - Generate modern responsive UI
 - Include imports and preview
-- Return ONLY Kotlin Compose code
+- Return ONLY Kotlin Compose code inside a ```kotlin ... ``` block
 - No explanations
-- No markdown
 - Ensure code is compilable
 
 If no screenshot is uploaded:
 - Act as a normal Android development AI assistant
 - Help with Kotlin, Java, Jetpack Compose, XML, MVVM, Firebase, APIs, debugging, and Android architecture
+
+Extra Rules:
+
+* For normal conversation, reply naturally.
+* When reviewing code/UI/architecture, briefly suggest improvements if relevant.
+* End with: "Want me to improve it and generate the updated code?"
+* Only generate improved code if the user confirms (e.g., "yes", "improve it").
+* Otherwise continue normally.
+ 
 """
     }
 }
