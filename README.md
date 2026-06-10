@@ -51,7 +51,7 @@ Each chat session contains **three independent AI modes**, each storing their ow
 - Each session shows its title and creation date
 
 ### 💬 Beautiful Chat UI
-- ChatGPT-style full-width message bubbles
+-  full-width message bubbles
 - Gemini responses render with **code block highlighting**
 - One-tap **Copy button** on every code block (all 3 modes!)
 - Full **text selection** support on all AI responses
@@ -59,7 +59,7 @@ Each chat session contains **three independent AI modes**, each storing their ow
 
 ### 📸 Image Upload (UI Builder)
 - Attach screenshots directly from your gallery
-- Gemini analyzes the UI and produces production-ready Compose code
+- AI analyzes the UI and produces production-ready Compose code
 - Preview and remove images before sending
 
 ### 🔗 Prompt Tune Integration
