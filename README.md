@@ -139,7 +139,7 @@ N-Droid/
 
 ## 📸 Screenshots
 
-> *Coming soon — feel free to add your own!*
+> *Coming soon *
 
 ---
 
@@ -178,4 +178,4 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 ---
 
-<p align="center">Made with ❤️ and Gemini AI · N-Droid v2.0</p>
+<p align="center"> N-Droid v2.0</p>
