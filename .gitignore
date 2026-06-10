@@ -17,4 +17,5 @@ local.properties
 app/release/
 *.apk
 build_log.txt
+.idea/
 
